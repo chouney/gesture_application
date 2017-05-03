@@ -37,9 +37,6 @@ def load(filepack,prefilename="feature"):
                 store(isTurn, filepack + "/isTurn", name)
 
     return datas
-load("circle")
-load("cross")
-load("left_slide")
-load("right_slide")
-load("down_slide")
 
+a = [[1],[2],[3],[4],[5]]
+print a[1:2]

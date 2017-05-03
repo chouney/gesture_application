@@ -4,6 +4,22 @@ import os
 from hmmlearn import hmm
 import json
 import matplotlib.pyplot as plt
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+from matplotlib.colors import ListedColormap
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import make_moons, make_circles, make_classification
+from sklearn.neural_network import MLPClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.gaussian_process import GaussianProcessClassifier
+from sklearn.gaussian_process.kernels import RBF
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
 # 构造单个通道的拒识模型
 def build_unrecogonized_model(models):
@@ -31,7 +47,6 @@ def build_unrecogonized_model(models):
 
     start_prob = np.array([1.0/n_components] * n_components)
     covars = np.array(covars)
-    covars1 = .5 * np.tile(np.identity(12), (16, 1, 1))
     model = hmm.GaussianHMM(n_components=n_components,covariance_type="full")
     model.startprob_ = np.array(start_prob)
     model.transmat_ = np.array(transmat)
@@ -55,66 +70,36 @@ def draw(X, Z, model):
     plt.show()
 
 
-# #假数据
-# test_model = []
-# startprob = np.array([0.6, 0.3, 0.1, 0.0])
-# # The transition matrix, note that there are no transitions possible
-# # between component 1 and 3
-# transmat = np.array([[0.7, 0.2, 0.0, 0.1],
-#                      [0.3, 0.5, 0.2, 0.0],
-#                      [0.0, 0.3, 0.5, 0.2],
-#                      [0.2, 0.0, 0.2, 0.6]])
-# # The means of each component
-# means = np.array([[0.0,  0.0],
-#                   [0.0, 11.0],
-#                   [9.0, 10.0],
-#                   [11.0, -1.0]])
-# # The covariance of each component
-# covars = .5 * np.tile(np.identity(2), (4, 1, 1))
-#
-# # Build an HMM instance and set parameters
-# model = hmm.GaussianHMM(n_components=4, covariance_type="full")
-# model.startprob_ = startprob
-# model.transmat_ = transmat
-# model.means_ = means
-# model.covars_ = covars
-# test_model.append(model)
-# model = hmm.GaussianHMM(n_components=4, covariance_type="full")
-# model.startprob_ = startprob
-# model.transmat_ = transmat
-# model.means_ = means
-# model.covars_ = covars
-# test_model.append(model)
-# model = hmm.GaussianHMM(n_components=4, covariance_type="full")
-# model.startprob_ = startprob
-# model.transmat_ = transmat
-# model.means_ = means
-# model.covars_ = covars
-# test_model.append(model)
-# model = hmm.GaussianHMM(n_components=4, covariance_type="full")
-# model.startprob_ = startprob
-# model.transmat_ = transmat
-# model.means_ = means
-# model.covars_ = covars
-# test_model.append(model)
-#
-#
-#
-# # 拒识手势
-# trans_prob = np.array([[0.0625]*16]*16)
-# unrecogonized_isTurn_model = hmm.GaussianHMM(n_components=16)
-# unrecogonized_normal_model = hmm.GaussianHMM(n_components=16)
-# unrecogonized_radius_model = hmm.GaussianHMM(n_components=16)
-# unrecogonized_velocity_model = hmm.GaussianHMM(n_components=16)
-# unrecogonized_test_model = build_unrecogonized_model(test_model)
-# X, Z = unrecogonized_test_model.sample(500)
-# draw(X, Z, unrecogonized_test_model)
-# X, Z = unrecogonized_isTurn_model.sample(500)
-# draw(X, Z)
-# X, Z = unrecogonized_normal_model.sample(500)
-# draw(X, Z)
-# X, Z = unrecogonized_radius_model.sample(500)
-# draw(X, Z)
-# X, Z = unrecogonized_velocity_model.sample(500)
-# draw(X, Z)
+# 给定数据的分类器可视化
+def classfication_loss(X_train , y_train, X_test, y_test):
+    h = .02  # step size in the mesh
 
+    names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
+             "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
+             "Naive Bayes", "QDA"]
+
+    classifiers = [
+        KNeighborsClassifier(3),
+        SVC(kernel="linear", C=0.025),
+        SVC(gamma=2, C=1),
+        GaussianProcessClassifier(1.0 * RBF(1.0), warm_start=True),
+        DecisionTreeClassifier(max_depth=5),
+        RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+        MLPClassifier(alpha=1),
+        AdaBoostClassifier(),
+        GaussianNB(),
+        QuadraticDiscriminantAnalysis()]
+
+    for name, clf in zip(names, classifiers):
+        start = time.time()
+        clf.fit(X_train,y_train)
+        print "分类器：",name,"训练用时：", time.time()-start
+        start = time.time()
+        Z = clf.predict(X_test)
+        test = np.array(y_test)[:, 0]
+        print "预测用时：", time.time()-start
+        loss = 0
+        for i in range(0,len(Z)):
+            if Z[i] != test[i]:
+                loss += 1
+        print "准确率：",1.0-(loss*1.0/len(Z)), "detail：", [Z[i] + ":" + test[i] for i in range(0, len(Z))]
