@@ -4,6 +4,7 @@ import os
 from hmmlearn import hmm
 import json
 import matplotlib.pyplot as plt
+from sklearn import preprocessing
 import warnings
 import time
 import zqx_utils
@@ -16,21 +17,69 @@ def store(data):
         json_file.write(json.dumps(data))
 
 
-def load(filepack,prefilename="feature"):
+def load(filepack, prefilename="feature", start=0, end=-1):
     datas = []
     lens = []
     files = os.listdir(filepack)
+    index = -1
     for name in files:
         if name.startswith(prefilename):
+            index += 1
+            if index < start or (end != -1 and index >= end):
+                continue
             sample = 0
-            with open(filepack+"/"+name) as json_file:
-                data = json.load(json_file)["cur"]
+            with open(filepack + "/" + name) as json_file:
+                data = json.load(json_file)['cur']
                 for row in data:
                     datas.append(row)
-                    sample+=1
+                    sample += 1
             lens.append(sample)
     return datas, lens
 
+
+def test_score(gesture):
+    test_list, test_len = load(gesture, start=80)
+    X = []
+    train_index = 0
+    index = 0
+    trainlen = test_len[train_index]
+    loss_num = 0
+    for r in test_list:
+        if index >= trainlen:
+            map = {
+                'left_slide':left_slide_model.score(X),
+                'right_slide':right_slide_model.score(X),
+                'circle':circle_model.score(X),
+                'cross':cross_model.score(X),
+                'uncogonized':uncogonized_model.score(X)
+            }
+
+            m_gesture = max(zip(map.values(), map.keys()))[1]
+            if m_gesture == 'uncogonized':
+                print "手势：", gesture, "被拒识,detail", X
+            if m_gesture != gesture:
+                loss_num += 1
+            print "测试手势：",gesture, "识别结果：", m_gesture
+            train_index+=1
+            trainlen = test_len[train_index]
+            index = 0
+            X = []
+        index += 1
+        X.append(r)
+    map = {
+        'left_slide': left_slide_model.score(X),
+        'right_slide': right_slide_model.score(X),
+        'circle': circle_model.score(X),
+        'cross': cross_model.score(X),
+        'uncogonized': uncogonized_model.score(X)
+    }
+    m_gesture = max(zip(map.values(), map.keys())[1])
+    if m_gesture == 'uncogonized':
+        print "手势：", gesture, "被拒识,detail", X
+    if m_gesture != gesture:
+        loss_num += 1
+    print "测试手势：", gesture, "识别结果：", m_gesture
+    return loss_num, len(test_len)
 
 # 创建一个高斯HMM模型
 n = time.time()
@@ -39,10 +88,10 @@ right_slide_model= hmm.GaussianHMM(n_components=4)
 circle_model= hmm.GaussianHMM(n_components=4)
 cross_model= hmm.GaussianHMM(n_components=4)
 
-left_slide, lslen = load("./left_slide")
-right_slide, rslen = load("./right_slide")
-circle, clen = load("./circle")
-cross, crlen = load("./cross")
+left_slide, lslen = load("./left_slide", end=80)
+right_slide, rslen = load("./right_slide", end=80)
+circle, clen = load("./circle", end=80)
+cross, crlen = load("./cross", end=80)
 # X = np.concatenate([left_slide, right_slide, circle, cross])
 # lengths = [len(left_slide),len(right_slide),len(circle),len(cross)]
 # model.fit(X, lengths)
@@ -53,77 +102,25 @@ cross_model.fit(cross, crlen)
 # 创建拒识模型
 uncogonized_model = zqx_utils.build_unrecogonized_model([circle_model, cross_model,left_slide_model, right_slide_model])
 
-print "训练16组HMM模型，耗时：",time.time()-n," 秒"
+print "训练4组HMM模型，耗时：",time.time()-n," 秒"
 
-test_circle,lenc = load("./test", "circle")
-test_cross, lencr = load("./test", "cross")
-test_left_slide,lenle = load("./test", "left_slide")
-test_right_slide,lenrs = load("./test", "right_slide")
-
-# Z1 = cross_model.predict_proba(test_circle,[len(test_circle)])
-# Z2 = cross_model.predict_proba(test_cross,[len(test_cross)])
-# Z3 = cross_model.predict_proba(test_left_slide,[len(test_left_slide)])
-# Z4 = cross_model.predict_proba(test_right_slide,[len(test_right_slide)])
-Z1 = circle_model.score(test_circle)
-Z2 = cross_model.score(test_circle)
-Z3 = left_slide_model.score(test_circle)
-Z4 = right_slide_model.score(test_circle)
-Z5 = uncogonized_model.score(test_circle)
+loss = 0
+total_len = 0
 print "测试画圆手势模型："
-print Z1
-print Z2
-print Z3
-print Z4
-print Z5
-Z1 = circle_model.score(test_cross)
-Z2 = cross_model.score(test_cross)
-Z3 = left_slide_model.score(test_cross)
-Z4 = right_slide_model.score(test_cross)
-Z5 = uncogonized_model.score(test_cross)
-
+loss_num, clen = test_score("circle")
+loss+=loss_num
+total_len += clen
 print "测试画叉手势模型："
-print Z1
-print Z2
-print Z3
-print Z4
-print Z5
-
-Z1 = circle_model.score(test_left_slide)
-Z2 = cross_model.score(test_left_slide)
-Z3 = left_slide_model.score(test_left_slide)
-Z4 = right_slide_model.score(test_left_slide)
-Z5 = uncogonized_model.score(test_left_slide)
-
+loss_num, clen = test_score("cross")
+loss+=loss_num
+total_len += clen
 print "测试左划手势模型："
-print Z1
-print Z2
-print Z3
-print Z4
-print Z5
-
-Z1 = circle_model.score(test_right_slide)
-Z2 = cross_model.score(test_right_slide)
-Z3 = left_slide_model.score(test_right_slide)
-Z4 = right_slide_model.score(test_right_slide)
-Z5 = uncogonized_model.score(test_right_slide)
-
+loss_num, clen = test_score("left_slide")
+loss+=loss_num
+total_len += clen
 print "测试右划手势模型："
-print Z1
-print Z2
-print Z3
-print Z4
-print Z5
-
-X = uncogonized_model.sample(10)[0];
-Z1 = circle_model.score(X)
-Z2 = cross_model.score(X)
-Z3 = left_slide_model.score(X)
-Z4 = right_slide_model.score(X)
-Z5 = uncogonized_model.score(X)
-print "测试拒识手势模型："
-print Z1
-print Z2
-print Z3
-print Z4
-print Z5
+loss_num, clen = test_score("right_slide")
+loss+=loss_num
+total_len += clen
+print "测试正确率：",1.0-loss*1.0/total_len
 # zqx_utils.draw(X, Z, uncogonized_model)

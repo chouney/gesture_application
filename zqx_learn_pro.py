@@ -44,6 +44,48 @@ def load(filepack, prefilename="feature", start=0, end=-1):
             lens.append(sample)
     return preprocessing.normalize(datas), lens
 
+# HMM模型打分的私有方法,如果不符合则返回False
+def test_and_score(X_isTurn,X_normal,X_radius,X_velocity ,gesture):
+    channels = [[X_isTurn,[circle_isTurn_model, cross_isTurn_model,left_slide_isTurn_model,right_slide_isTurn_model,unrecogonized_isTurn_model]],
+            [X_normal,[circle_normal_model, cross_normal_model, left_slide_normal_model, right_slide_normal_model, unrecogonized_normal_model]],
+            [X_radius,[circle_radius_model, cross_radius_model, left_slide_radius_model, right_slide_radius_model, unrecogonized_radius_model]],
+            [X_velocity,[circle_velocity_model, cross_velocity_model, left_slide_velocity_model, right_slide_velocity_model, unrecogonized_velocity_model]]]
+    res = []
+    unrecognized_count = 0
+    for X, models in channels:
+        map_score = {
+            'circle': 0,
+            'cross': 0,
+            'left_slide': 0,
+            'right_slide': 0,
+            'unrecogonized': 0
+        }
+        keys = map_score.keys()
+        for i in range(0, len(models)):
+            s = models[i].score(X)
+            map_score[keys[i]] = s
+            if i != 4:
+                res.append(s)
+        if max(zip(map_score.values(), map_score.keys()))[1] == 'unrecogonized':
+            unrecognized_count += 1
+    if unrecognized_count == 4:
+        print "手势：", gesture, "被拒识,detail",X_velocity
+        # return False
+    return res
+
+def score(X_isTurn,X_normal,X_radius,X_velocity):
+    channels = [[X_isTurn, [circle_isTurn_model, cross_isTurn_model,left_slide_isTurn_model,right_slide_isTurn_model]],
+            [X_normal, [circle_normal_model, cross_normal_model, left_slide_normal_model, right_slide_normal_model]],
+            [X_radius, [circle_radius_model, cross_radius_model, left_slide_radius_model, right_slide_radius_model]],
+            [X_velocity, [circle_velocity_model, cross_velocity_model, left_slide_velocity_model,
+                          right_slide_velocity_model]]]
+    res = []
+    for X, models in channels:
+        for i in range(0, len(models)):
+            s = models[i].score(X)
+            res.append(s)
+    return res
+
 # 获得神经网络的输入结点的集合，如果手势被拒识模型识别，则插入-1
 def hmm_score_get_test_nn(gesture, feature="feature"):
     test_isTurn, lenT = load(gesture + "/isTurn", feature, start=80)
@@ -66,103 +108,25 @@ def hmm_score_get_test_nn(gesture, feature="feature"):
             if trainIndex < len(lenT):
                 trainLen = lenT[trainIndex]
             # 计算该组训练集的score
-            res = []
-            Z1 = circle_isTurn_model.score(isTurn)
-            Z2 = cross_isTurn_model.score(isTurn)
-            Z3 = left_slide_isTurn_model.score(isTurn)
-            Z4 = right_slide_isTurn_model.score(isTurn)
-            Z5 = unrecogonized_isTurn_model.score(isTurn)
-            print "isturn 模型打分",Z1,Z2,Z3,Z4,Z5
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            Z1 = circle_normal_model.score(normal)
-            Z2 = cross_normal_model.score(normal)
-            Z3 = left_slide_normal_model.score(normal)
-            Z4 = right_slide_normal_model.score(normal)
-            Z5 = unrecogonized_normal_model.score(normal)
-            print "normal 模型打分",Z1,Z2,Z3,Z4,Z5
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            Z1 = circle_radius_model.score(radis)
-            Z2 = cross_radius_model.score(radis)
-            Z3 = left_slide_radius_model.score(radis)
-            Z4 = right_slide_radius_model.score(radis)
-            Z5 = unrecogonized_radius_model.score(radis)
-            print "radius 模型打分",Z1,Z2,Z3,Z4,Z5
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            Z1 = circle_velocity_model.score(velocity)
-            Z2 = cross_velocity_model.score(velocity)
-            Z3 = left_slide_velocity_model.score(velocity)
-            Z4 = right_slide_velocity_model.score(velocity)
-            Z5 = unrecogonized_velocity_model.score(velocity)
-            print "velocity 模型打分",Z1,Z2,Z3,Z4,Z5
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            normal_res = preprocessing.normalize(res)
-            out.append(list(normal_res[0]))
+            res = test_and_score(isTurn, normal, radis, velocity, gesture)
+            # 被拒识了则不进行输入
+            if res != False:
+                normal_res = preprocessing.normalize(res)
+                out.append(list(normal_res[0]))
             isTurn = []
             normal = []
             radis = []
             velocity = []
         # 拼接每组的训练集结果
+        index += 1
         isTurn.append(t)
         normal.append(n)
         radis.append(r)
         velocity.append(v)
-        index += 1
-    res = []
-    Z1 = circle_isTurn_model.score(isTurn)
-    Z2 = cross_isTurn_model.score(isTurn)
-    Z3 = left_slide_isTurn_model.score(isTurn)
-    Z4 = right_slide_isTurn_model.score(isTurn)
-    Z5 = unrecogonized_isTurn_model.score(isTurn)
-    print "isturn 模型打分", Z1, Z2, Z3, Z4, Z5
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    Z1 = circle_normal_model.score(normal)
-    Z2 = cross_normal_model.score(normal)
-    Z3 = left_slide_normal_model.score(normal)
-    Z4 = right_slide_normal_model.score(normal)
-    Z5 = unrecogonized_normal_model.score(normal)
-    print "normal 模型打分", Z1, Z2, Z3, Z4, Z5
-
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    Z1 = circle_radius_model.score(radis)
-    Z2 = cross_radius_model.score(radis)
-    Z3 = left_slide_radius_model.score(radis)
-    Z4 = right_slide_radius_model.score(radis)
-    Z5 = unrecogonized_radius_model.score(radis)
-    print "radius 模型打分", Z1, Z2, Z3, Z4, Z5
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    Z1 = circle_velocity_model.score(velocity)
-    Z2 = cross_velocity_model.score(velocity)
-    Z3 = left_slide_velocity_model.score(velocity)
-    Z4 = right_slide_velocity_model.score(velocity)
-    Z5 = unrecogonized_velocity_model.score(velocity)
-    print "velocity 模型打分", Z1, Z2, Z3, Z4, Z5
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    normal_res = preprocessing.normalize(res)
-    out.append(list(normal_res[0]))
+    res = test_and_score(isTurn, normal, radis, velocity, gesture)
+    if res != False:
+        normal_res = preprocessing.normalize(res)
+        out.append(list(normal_res[0]))
     return out
 
 # 获得神经网络的输入结点的集合
@@ -187,39 +151,7 @@ def hmm_score_train_nn(gesture, feature="feature"):
             if trainIndex < len(lenT):
                 trainLen = lenT[trainIndex]
             # 计算该组训练集的score
-            res = []
-            Z1 = circle_isTurn_model.score(isTurn)
-            Z2 = cross_isTurn_model.score(isTurn)
-            Z3 = left_slide_isTurn_model.score(isTurn)
-            Z4 = right_slide_isTurn_model.score(isTurn)
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            Z1 = circle_normal_model.score(normal)
-            Z2 = cross_normal_model.score(normal)
-            Z3 = left_slide_normal_model.score(normal)
-            Z4 = right_slide_normal_model.score(normal)
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            Z1 = circle_radius_model.score(radis)
-            Z2 = cross_radius_model.score(radis)
-            Z3 = left_slide_radius_model.score(radis)
-            Z4 = right_slide_radius_model.score(radis)
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
-            Z1 = circle_velocity_model.score(velocity)
-            Z2 = cross_velocity_model.score(velocity)
-            Z3 = left_slide_velocity_model.score(velocity)
-            Z4 = right_slide_velocity_model.score(velocity)
-            res.append(Z1)
-            res.append(Z2)
-            res.append(Z3)
-            res.append(Z4)
+            res = score(isTurn,normal,radis,velocity)
             normal_res = preprocessing.normalize(res)
             out.append(list(normal_res[0]))
             isTurn = []
@@ -232,39 +164,7 @@ def hmm_score_train_nn(gesture, feature="feature"):
         radis.append(r)
         velocity.append(v)
         index += 1
-    res = []
-    Z1 = circle_isTurn_model.score(isTurn)
-    Z2 = cross_isTurn_model.score(isTurn)
-    Z3 = left_slide_isTurn_model.score(isTurn)
-    Z4 = right_slide_isTurn_model.score(isTurn)
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    Z1 = circle_normal_model.score(normal)
-    Z2 = cross_normal_model.score(normal)
-    Z3 = left_slide_normal_model.score(normal)
-    Z4 = right_slide_normal_model.score(normal)
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    Z1 = circle_radius_model.score(radis)
-    Z2 = cross_radius_model.score(radis)
-    Z3 = left_slide_radius_model.score(radis)
-    Z4 = right_slide_radius_model.score(radis)
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
-    Z1 = circle_velocity_model.score(velocity)
-    Z2 = cross_velocity_model.score(velocity)
-    Z3 = left_slide_velocity_model.score(velocity)
-    Z4 = right_slide_velocity_model.score(velocity)
-    res.append(Z1)
-    res.append(Z2)
-    res.append(Z3)
-    res.append(Z4)
+    res = score(isTurn,normal,radis,velocity)
     normal_res = preprocessing.normalize(res)
     out.append(list(normal_res[0]))
     return out
@@ -337,13 +237,9 @@ cross_train_samples = hmm_score_train_nn("cross")
 left_slide_train_samples = hmm_score_train_nn("left_slide")
 right_slide_train_samples = hmm_score_train_nn("right_slide")
 
-# 使用训练集集合训练神经网络
-mlp = MLPClassifier(hidden_layer_sizes=(256,), learning_rate_init= 0.01)
 X_train = circle_train_samples + cross_train_samples + left_slide_train_samples + right_slide_train_samples
 y_train = [["circle"]] * len(circle_train_samples) + [["cross"]] * len(cross_train_samples) + [["left_slide"]] * len(
      left_slide_train_samples) + [["right_slide"]] * len(right_slide_train_samples)
-# 划分训练集和测试集
-mlp.fit(X_train,y_train)
 
 print "训练16个输入结点，256个隐藏结点的nn模型，耗时：",(time.time()-nn),"秒"
 predict = time.time()
@@ -361,13 +257,13 @@ print "总共训练HMM-NN模型时间，耗时：",(time.time()-h),"秒"
 
 
 # 测试拒识模型并或获得测试数据
-print "测试拒识模型：circle"
+print "测试数据：circle"
 circle_test_samples = hmm_score_get_test_nn("circle")
-print "测试拒识模型：cross"
+print "测试数据：cross"
 cross_test_samples = hmm_score_get_test_nn("cross")
-print "测试拒识模型：left_slide"
+print "测试数据：left_slide"
 left_slide_test_samples = hmm_score_get_test_nn("left_slide")
-print "测试拒识模型right_slide"
+print "测试数据right_slide"
 right_slide_test_samples = hmm_score_get_test_nn("right_slide")
 
 X_test = circle_test_samples + cross_test_samples + left_slide_test_samples + right_slide_test_samples
