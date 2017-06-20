@@ -42,6 +42,8 @@ def load(filepack, prefilename="feature", start=0, end=-1):
                     datas.append(row)
                     sample += 1
             lens.append(sample)
+    if filepack.endswith("radis"):
+        return preprocessing.MinMaxScaler().fit_transform(datas), lens
     return preprocessing.normalize(datas), lens
 
 # HMM模型打分的私有方法,如果不符合则返回False
@@ -266,6 +268,32 @@ left_slide_test_samples = hmm_score_get_test_nn("left_slide")
 print "测试数据right_slide"
 right_slide_test_samples = hmm_score_get_test_nn("right_slide")
 
+# 测试画圆手势准确率
+print "测试画圆手势准确率"
+X_test = circle_test_samples
+y_test = [["circle"]] * len(circle_test_samples)
+zqx_utils.classfication_loss(X_train ,y_train, X_test, y_test)
+
+# 测试画叉手势准确率
+print "测试画叉手势准确率"
+X_test = cross_test_samples
+y_test = [["cross"]] * len(cross_test_samples)
+zqx_utils.classfication_loss(X_train ,y_train, X_test, y_test)
+
+# 测试左滑手势准确率
+print "测试左滑手势准确率"
+X_test = left_slide_test_samples
+y_test = [["left_slide"]] * len(left_slide_test_samples)
+zqx_utils.classfication_loss(X_train ,y_train, X_test, y_test)
+
+# 测试右滑手势准确率
+print "测试右滑手势准确率"
+X_test = right_slide_test_samples
+y_test = [["right_slide"]] * len(right_slide_test_samples)
+zqx_utils.classfication_loss(X_train ,y_train, X_test, y_test)
+
+#测试整体手势准确率
+print "测试整体手势准确率"
 X_test = circle_test_samples + cross_test_samples + left_slide_test_samples + right_slide_test_samples
 y_test = [["circle"]] * len(circle_test_samples) + [["cross"]] * len(cross_test_samples) + [["left_slide"]] * len(
     left_slide_test_samples) + [["right_slide"]] * len(right_slide_test_samples)
@@ -273,78 +301,3 @@ y_test = [["circle"]] * len(circle_test_samples) + [["cross"]] * len(cross_test_
 # 测试各个分类器性能和loss
 zqx_utils.classfication_loss(X_train ,y_train, X_test, y_test)
 
-# 使用结果集进行预测
-# Z = mlp.predict(X_test)
-# y_test = np.array(y_test)[:, 0]
-# print [Z[i]+":"+y_test[i] for i in range(0, len(Z))]
-# print "对测试集进行预测，耗时：",(time.time()-predict),"秒"
-
-
-#
-#
-# # different learning rate schedules and momentum parameters
-# params = [{'solver': 'sgd', 'learning_rate': 'constant', 'momentum': 0,
-#            'learning_rate_init': 0.2},
-#           {'solver': 'sgd', 'learning_rate': 'constant', 'momentum': .9,
-#            'nesterovs_momentum': False, 'learning_rate_init': 0.2},
-#           {'solver': 'sgd', 'learning_rate': 'constant', 'momentum': .9,
-#            'nesterovs_momentum': True, 'learning_rate_init': 0.2},
-#           {'solver': 'sgd', 'learning_rate': 'invscaling', 'momentum': 0,
-#            'learning_rate_init': 0.2},
-#           {'solver': 'sgd', 'learning_rate': 'invscaling', 'momentum': .9,
-#            'nesterovs_momentum': True, 'learning_rate_init': 0.2},
-#           {'solver': 'sgd', 'learning_rate': 'invscaling', 'momentum': .9,
-#            'nesterovs_momentum': False, 'learning_rate_init': 0.2},
-#           {'solver': 'adam', 'learning_rate_init': 0.01}]
-#
-# labels = ["constant learning-rate", "constant with momentum",
-#           "constant with Nesterov's momentum",
-#           "inv-scaling learning-rate", "inv-scaling with momentum",
-#           "inv-scaling with Nesterov's momentum", "adam"]
-#
-# plot_args = [{'c': 'red', 'linestyle': '-'},
-#              {'c': 'green', 'linestyle': '-'},
-#              {'c': 'blue', 'linestyle': '-'},
-#              {'c': 'red', 'linestyle': '--'},
-#              {'c': 'green', 'linestyle': '--'},
-#              {'c': 'blue', 'linestyle': '--'},
-#              {'c': 'black', 'linestyle': '-'}]
-#
-#
-# def plot_on_dataset(X, y, ax, name):
-#     # for each dataset, plot learning for each learning strategy
-#     print("\nlearning on dataset %s" % name)
-#     ax.set_title(name)
-#     X = MinMaxScaler().fit_transform(X)
-#     mlps = []
-#     if name == "digits":
-#         # digits is larger but converges fairly quickly
-#         max_iter = 15
-#     else:
-#         max_iter = 200
-#
-#     for label, param in zip(labels, params):
-#         print("training: %s" % label)
-#         mlp = MLPClassifier(verbose=0, random_state=0,
-#                             max_iter=max_iter, **param)
-#         mlp.fit(X, y)
-#         mlps.append(mlp)
-#         print("Training set score: %f" % mlp.score(X, y))
-#         print("Training set loss: %f" % mlp.loss_)
-#     for mlp, label, args in zip(mlps, labels, plot_args):
-#             ax.plot(mlp.loss_curve_, label=label, **args)
-#
-#
-# fig, axes = plt.subplots(1, 1, figsize=(15, 10))
-# # load / generate some toy datasets
-# iris = datasets.load_iris()
-# digits = datasets.load_digits()
-# data_sets = [(iris.data, iris.target),
-#              (digits.data, digits.target),
-#              datasets.make_circles(noise=0.2, factor=0.5, random_state=1),
-#              datasets.make_moons(noise=0.3, random_state=0)]
-#
-# plot_on_dataset(X,y, ax=axes, name="gesture")
-#
-# fig.legend(axes.get_lines(), labels=labels, ncol=3, loc="upper center")
-# plt.show()

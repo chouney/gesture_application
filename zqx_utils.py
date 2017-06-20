@@ -74,22 +74,24 @@ def draw(X, Z, model):
 def classfication_loss(X_train , y_train, X_test, y_test):
     h = .02  # step size in the mesh
 
-    names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
-             "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
-             "Naive Bayes", "QDA"]
+    # names = ["Nearest Neighbors", "Linear SVM", "RBF SVM", "Gaussian Process",
+    #          "Decision Tree", "Random Forest", "Neural Net", "AdaBoost",
+    #          "Naive Bayes", "QDA"]
+
+    names = ["Decision Tree"]
 
     classifiers = [
-        KNeighborsClassifier(3),
-        SVC(kernel="linear", C=0.025),
-        SVC(gamma=2, C=1),
-        GaussianProcessClassifier(1.0 * RBF(1.0), warm_start=True),
+        # KNeighborsClassifier(3),
+        # SVC(kernel="linear", C=0.025),
+        # SVC(gamma=2, C=1),
+        # GaussianProcessClassifier(1.0 * RBF(1.0), warm_start=True),
         DecisionTreeClassifier(max_depth=5),
-        RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
-        MLPClassifier(alpha=1),
-        AdaBoostClassifier(),
-        GaussianNB(),
-        QuadraticDiscriminantAnalysis()]
-
+        # RandomForestClassifier(max_depth=5, n_estimators=10, max_features=1),
+        # MLPClassifier(alpha=1),
+        # AdaBoostClassifier(),
+        # GaussianNB(),
+        # QuadraticDiscriminantAnalysis()]
+    ]
     for name, clf in zip(names, classifiers):
         start = time.time()
         clf.fit(X_train,y_train)

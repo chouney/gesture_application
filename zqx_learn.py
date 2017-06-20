@@ -108,18 +108,22 @@ loss = 0
 total_len = 0
 print "测试画圆手势模型："
 loss_num, clen = test_score("circle")
+print "准确率",1.0-loss_num*1.0/clen
 loss+=loss_num
 total_len += clen
 print "测试画叉手势模型："
 loss_num, clen = test_score("cross")
+print "准确率",1.0-loss_num*1.0/clen
 loss+=loss_num
 total_len += clen
 print "测试左划手势模型："
 loss_num, clen = test_score("left_slide")
+print "准确率",1.0-loss_num*1.0/clen
 loss+=loss_num
 total_len += clen
 print "测试右划手势模型："
 loss_num, clen = test_score("right_slide")
+print "准确率",1.0-loss_num*1.0/clen
 loss+=loss_num
 total_len += clen
 print "测试正确率：",1.0-loss*1.0/total_len
